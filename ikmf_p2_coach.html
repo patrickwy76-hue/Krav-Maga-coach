@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>IKMF P2 Coach - Tactical Training App</title>
+    
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="P2 Coach">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- SVG Favicon & Apple Touch Icon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><polygon points='50,15 85,35 85,75 50,95 15,75 15,35' fill='%23f59e0b' stroke='%23d97706' stroke-width='4'/><text x='50' y='63' font-family='sans-serif' font-weight='900' font-size='32' fill='%230f172a' text-anchor='middle'>P2</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><polygon points='50,15 85,35 85,75 50,95 15,75 15,35' fill='%23f59e0b'/><text x='50' y='63' font-family='sans-serif' font-weight='900' font-size='32' fill='%230f172a' text-anchor='middle'>P2</text></svg>">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        tactical: {
+                            950: '#090d16',
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155',
+                            accent: '#f59e0b',
+                            accentHover: '#d97706',
+                            emerald: '#10b981',
+                            red: '#ef4444'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Scrollbar & Touch Polish */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #f59e0b; }
+        .tap-highlight-transparent { -webkit-tap-highlight-color: transparent; }
+        .safe-area-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+        .safe-area-top { padding-top: max(0.75rem, env(safe-area-inset-top)); }
+        
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(245, 158, 11, 0.6); }
+        }
+        .pulse-gold-glow { animation: pulse-gold 3s infinite; }
+    </style>
+</head>
+<body class="bg-tactical-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950 pb-20 md:pb-6">
+
+    <!-- HEADER & TOP NAVIGATION -->
+    <header class="bg-tactical-900 border-b border-tactical-700 sticky top-0 z-40 safe-area-top shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <!-- App Logo & Title -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-amber-500 text-tactical-950 flex items-center justify-center font-black text-xl shadow-md shadow-amber-500/20 border border-amber-400">
+                    P2
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg tracking-tight text-white flex items-center gap-2">
+                        IKMF P2 Coach
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">TACTICAL</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">Krav Maga Practitioner 2 Preparation System</p>
+                </div>
+            </div>
+
+            <!-- Top Header Action Controls -->
+            <div class="flex items-center space-x-2">
+                <!-- Days to Exam Badge -->
+                <div id="header-countdown-badge" class="bg-tactical-800 border border-slate-700 px-3 py-1.5 rounded-lg flex items-center space-x-1.5 text-xs font-medium cursor-pointer hover:border-amber-500 transition-colors" onclick="switchTab('dashboard')">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-amber-500"></i>
+                    <span id="header-days-count" class="text-amber-400 font-bold">-- Tage</span>
+                </div>
+
+                <!-- Wake Lock Toggle Indicator -->
+                <button id="wakelock-btn" onclick="toggleWakeLockManual()" title="Bildschirm-Standby verhindern (Wake-Lock)" class="px-2.5 py-1.5 rounded-lg bg-tactical-800 border border-slate-700 hover:border-slate-500 flex items-center space-x-1.5 text-xs transition-colors">
+                    <i data-lucide="smartphone" id="wakelock-icon" class="w-4 h-4 text-slate-400"></i>
+                    <span id="wakelock-text" class="hidden lg:inline text-slate-400">Wake-Lock</span>
+                </button>
+
+                <!-- Backup & Sync Button -->
+                <button onclick="openBackupModal()" class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 flex items-center space-x-1.5 text-xs font-medium transition-colors">
+                    <i data-lucide="database" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">Backup & Sync</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Desktop Navigation Tabs -->
+        <nav class="hidden md:flex max-w-7xl mx-auto px-4 space-x-1 border-t border-slate-800/80 pt-1 text-sm font-medium text-slate-400">
+            <button onclick="switchTab('dashboard')" id="nav-desk-dashboard" class="tab-desk-btn px-4 py-2 border-b-2 border-amber-500 text-amber-400 flex items-center gap-2">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+            </button>
+            <button onclick="switchTab('planner')" id="nav-desk-planner" class="tab-desk-btn px-4 py-2 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2">
+                <i data-lucide="calendar" class="w-4 h-4"></i> Wochenplan
+            </button>
+            <button onclick="switchTab('timer')" id="nav-desk-timer" class="tab-desk-btn px-4 py-2 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2">
+                <i data-lucide="timer" class="w-4 h-4"></i> Intervall-Timer
+            </button>
+            <button onclick="switchTab('catalog')" id="nav-desk-catalog" class="tab-desk-btn px-4 py-2 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-4 h-4"></i> Technik-Katalog
+            </button>
+            <button onclick="switchTab('drill')" id="nav-desk-drill" class="tab-desk-btn px-4 py-2 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2">
+                <i data-lucide="zap" class="w-4 h-4"></i> Stress-Drill
+            </button>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-grow">
+
+        <!-- TAB 1: DASHBOARD -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <!-- Top Alert / Exam Target Card -->
+            <div class="bg-gradient-to-r from-tactical-900 via-slate-900 to-tactical-800 border border-tactical-700 rounded-2xl p-5 md:p-6 shadow-xl relative overflow-hidden pulse-gold-glow">
+                <div class="absolute -right-10 -bottom-10 w-44 h-44 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                    <div class="space-y-2">
+                        <div class="inline-flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                            <i data-lucide="target" class="w-3.5 h-3.5"></i>
+                            <span>Ziel-Prüfung IKMF P2</span>
+                        </div>
+                        <h2 class="text-2xl md:text-3xl font-extrabold text-white">Vorbereitungs-Status & Countdown</h2>
+                        <p class="text-slate-400 text-sm max-w-xl">Verfolge deinen Fortschritt, passe das Prüfungsdatum an und halte dein Training diszipliniert auf Kurs.</p>
+                    </div>
+
+                    <!-- Exam Date Selector Box -->
+                    <div class="bg-tactical-950/80 border border-slate-700/80 rounded-xl p-4 flex flex-col space-y-3 min-w-[260px]">
+                        <label for="exam-date-picker" class="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                            <span>Prüfungsdatum wählen:</span>
+                            <i data-lucide="calendar-days" class="w-4 h-4 text-amber-500"></i>
+                        </label>
+                        <input type="date" id="exam-date-picker" onchange="updateExamDate(this.value)" class="bg-tactical-800 text-amber-400 font-bold border border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500">
+                        <div class="grid grid-cols-3 gap-1.5 pt-1">
+                            <button onclick="addMonthsToExam(1)" class="px-2 py-1 bg-tactical-800 hover:bg-slate-700 border border-slate-700 rounded text-xs text-slate-300 font-medium transition-colors">+1 Mon</button>
+                            <button onclick="addMonthsToExam(3)" class="px-2 py-1 bg-tactical-800 hover:bg-slate-700 border border-slate-700 rounded text-xs text-slate-300 font-medium transition-colors">+3 Mon</button>
+                            <button onclick="addMonthsToExam(6)" class="px-2 py-1 bg-tactical-800 hover:bg-slate-700 border border-slate-700 rounded text-xs text-slate-300 font-medium transition-colors">+6 Mon</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-800">
+                    <div class="bg-tactical-950/50 p-4 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block font-medium">Verbleibende Zeit</span>
+                        <div class="flex items-baseline space-x-1 mt-1">
+                            <span id="dash-days-left" class="text-2xl font-black text-amber-400">0</span>
+                            <span class="text-xs text-slate-400">Tage</span>
+                        </div>
+                        <span id="dash-weeks-left" class="text-[11px] text-slate-500 block mt-0.5">0 Wochen</span>
+                    </div>
+
+                    <div class="bg-tactical-950/50 p-4 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block font-medium">Restliche Einheiten</span>
+                        <div class="flex items-baseline space-x-1 mt-1">
+                            <span id="dash-sessions-left" class="text-2xl font-black text-emerald-400">0</span>
+                            <span class="text-xs text-slate-400">Einheiten</span>
+                        </div>
+                        <span class="text-[11px] text-slate-500 block mt-0.5">Lt. Wochenplan</span>
+                    </div>
+
+                    <div class="bg-tactical-950/50 p-4 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block font-medium">Technik-Meisterschaft</span>
+                        <div class="flex items-baseline space-x-1 mt-1">
+                            <span id="dash-technique-percent" class="text-2xl font-black text-amber-400">0%</span>
+                        </div>
+                        <span id="dash-technique-count" class="text-[11px] text-slate-500 block mt-0.5">0 von 0 sicher</span>
+                    </div>
+
+                    <div class="bg-tactical-950/50 p-4 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400 block font-medium">P2 Readiness Score</span>
+                        <div class="flex items-baseline space-x-1 mt-1">
+                            <span id="dash-readiness-score" class="text-2xl font-black text-emerald-400">0%</span>
+                        </div>
+                        <span id="dash-readiness-rank" class="text-[11px] text-amber-400/90 font-semibold block mt-0.5">P1 Basis</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Roadmap & Phase Tracker -->
+            <div class="bg-tactical-900 border border-tactical-700 rounded-2xl p-5 md:p-6 shadow-md space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-slate-100 flex items-center gap-2 text-lg">
+                        <i data-lucide="map" class="w-5 h-5 text-amber-500"></i>
+                        Dynamische 4-Phasen P2 Roadmap
+                    </h3>
+                    <span id="dash-current-phase-badge" class="text-xs font-bold px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">Phase 1</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 pt-2" id="roadmap-phases-container">
+                    <!-- Phases generated dynamically by JS -->
+                </div>
+            </div>
+
+            <!-- Two Column Dashboard Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Next Workout Widget -->
+                <div class="bg-tactical-900 border border-tactical-700 rounded-2xl p-5 shadow-md flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="calendar-clock" class="w-4 h-4 text-amber-500"></i>
+                                Nächste geplante Einheit
+                            </span>
+                            <span id="next-workout-day-badge" class="text-xs bg-slate-800 text-slate-300 font-semibold px-2 py-0.5 rounded">Heute</span>
+                        </div>
+                        <h4 id="next-workout-title" class="text-xl font-bold text-white">Technik & Biomechanik</h4>
+                        <p id="next-workout-desc" class="text-sm text-slate-400">Focus auf Inside Defense & simultane Konter im Stand.</p>
+                        <div class="flex items-center space-x-4 text-xs text-slate-300 pt-1">
+                            <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500"></i> <span id="next-workout-time">18:00 Uhr</span></span>
+                            <span class="flex items-center gap-1"><i data-lucide="timer" class="w-3.5 h-3.5 text-amber-500"></i> <span id="next-workout-duration">30 Min</span></span>
+                        </div>
+                    </div>
+                    <button id="btn-start-next-workout" onclick="startWorkoutFromDashboard()" class="mt-5 w-full bg-amber-500 hover:bg-amber-600 text-tactical-950 font-bold py-3 px-4 rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-amber-500/20 transition-all">
+                        <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                        <span>Im Timer starten</span>
+                    </button>
+                </div>
+
+                <!-- IKMF Examiner Readiness Checklist -->
+                <div class="bg-tactical-900 border border-tactical-700 rounded-2xl p-5 shadow-md space-y-4">
+                    <h3 class="font-bold text-slate-100 flex items-center gap-2">
+                        <i data-lucide="clipboard-check" class="w-5 h-5 text-emerald-400"></i>
+                        IKMF Prüfer-Checkliste (Self-Assessment)
+                    </h3>
+                    <div class="space-y-2.5 text-xs sm:text-sm" id="examiner-checklist">
+                        <!-- Checklist items rendered by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: FLEXIBLER WOCHENPLAN -->
+        <section id="tab-planner" class="tab-content space-y-6 hidden">
+            <div class="bg-tactical-900 border border-tactical-700 rounded-2xl p-5 md:p-6 shadow-md space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="calendar" class="w-5 h-5 text-amber-500"></i>
+                            Wochenplaner (Montag – Sonntag)
+                        </h2>
+                        <p class="text-xs text-slate-400">Passe deine Trainingszeiten an deinen Alltag an. Aktive Tage fliessen direkt in den Prüfungs-Countdown ein.</p>
+                    </div>
+                    <button onclick="resetWeeklyPlanner()" class="px-3 py-1.5 rounded-lg bg-tactical-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors flex items-center gap-1.5 self-start sm:self-auto">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Standard wiederherstellen
+                    </button>
+                </div>
+
+                <!-- Days Cards Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2" id="planner-days-container">
+                    <!-- Dynamic rendering of 7 days -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: INTERAKTIVER INTERVALL-TIMER -->
+        <section id="tab-timer" class="tab-content space-y-6 hidden">
+            <div class="bg-tactical-900 border border-tactical-700 rounded-2xl p-5 md:p-8 shadow-xl max-w-3xl mx-auto space-y-6">
+                <!-- Preset Templates Selection -->
+                <div class="space-y-3">
+                    <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Trainingstemplate / Intervallmodus</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="timer-presets-grid">
+                        <button onclick="selectTimerPreset('technik')" id="preset-technik" class="timer-preset-btn p-3 rounded-xl border border-amber-500 bg-amber-500/10 text-amber-400 text-left text-xs font-bold transition-all">
+                            Technik & Biomechanik
+                        </button>
+                        <button onclick="selectTimerPreset('kombis')" id="preset-kombis" class="timer-preset-btn p-3 rounded-xl border border-slate-700 bg-tactical-800 text-slate-300 text-left text-xs font-bold hover:border-slate-500 transition-all">
+                            Kombis & Flow
+                        </button>
+                        <button onclick="selectTimerPreset('stress')" id="preset-stress" class="timer-preset-btn p-3 rounded-xl border border-slate-700 bg-tactical-800 text-slate-300 text-left text-xs font-bold hover:border-slate-500 transition-all">
+                            Stress & Kondition
+                        </button>
+                        <button onclick="selectTimerPreset('express')" id="preset-express" class="timer-preset-btn p-3 rounded-xl border border-slate-700 bg-tactical-800 text-slate-300 text-left text-xs font-bold hover:border-slate-500 transition-all">
+                            10-Min Express
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Duration & Audio Settings -->
+                <div class="flex flex-wrap items-center justify-between gap-4 bg-tactical-950 p-4 rounded-xl border border-slate-800">
+                    <div class="flex items-center space-x-3">
+                        <label for="timer-total-mins" class="text-xs font-medium text-slate-300">Gesamtdauer:</label>
+                        <select id="timer-total-mins" onchange="onTimerDurationChange()" class="bg-tactical-800 text-amber-400 font-bold border border-slate-700 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+                            <option value="10">10 Minuten</option>
+                            <option value="15">15 Minuten</option>
+                            <option value="20">20 Minuten</option>
+                            <option value="30" selected>30 Minuten</option>
+                            <option value="45">45 Minuten</option>
+                            <option value="60">60 Minuten</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center space-x-4">
+                        <button id="btn-timer-mute" onclick="toggleTimerMute()" class="flex items-center space-x-1.5 text-xs text-slate-300 hover:text-white transition-colors">
+                            <i data-lucide="volume-2" id="icon-timer-mute" class="w-4 h-4 text-emerald-400"></i>
+                            <span id="text-timer-mute">Ton an</span>
+                        </button>
+                        <span class="text-slate-700">|</span>
+                        <div class="flex items-center space-x-1.5 text-xs text-slate-400">
+                            <i data-lucide="shield" class="w-4 h-4 text-amber-500"></i>
+                            <span id="timer-wakelock-status">Wake-Lock aktiv</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Display Display Counter -->
+                <div class="bg-tactical-950 border border-slate-800 rounded-2xl p-6 text-center space-y-4 relative overflow-hidden">
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span id="timer-phase-badge" class="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase">Bereit</span>
+                        <span id="timer-round-info" class="font-mono text-slate-300">Runde 1 / --</span>
+                    </div>
+
+                    <div class="py-2">
+                        <div id="timer-display" class="text-6xl sm:text-7xl md:text-8xl font-black font-mono tracking-tight text-amber-400">
+                            00:00
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-700">
+                        <div id="timer-progress-bar" class="bg-amber-500 h-full w-0 transition-all duration-300"></div>
+                    </div>
+
+                    <!-- Dynamic Tactical Exercise Cues -->
+                    <div class="pt-2 space-y-1 text-center">
+                        <h4 id="timer-exercise-title" class="text-lg font-bold text-white">Technik-Fokus</h4>
+                        <p id="timer-exercise-cue" class="text-xs sm:text-sm text-slate-400 italic">IKMF Cue: Huftedrehung & simultane Handfeuer-Abwehr beachten.</p>
+                    </div>
+                </div>
+
+                <!-- Timer Controls Button Bar -->
+                <div class="grid grid-cols-3 gap-3">
+                    <button id="btn-timer-start" onclick="startTimer()" class="bg-emerald-500 hover:bg-emerald-600 text-tactical-950 font-bold py-3 rounded-xl flex items-center justify-center space-x-2 transition-all shadow-lg shadow-emerald-500/20">
+                        <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                        <span>Start</span>
+                    </button>
+                    <button id="btn-timer-pause" onclick="pauseTimer()" disabled class="bg-tactical-800 opacity-50 border border-slate-700 text-slate-300 font-bold py-3 rounded-xl flex items-center justify-center space-x-2 transition-all">
+                        <i data-lucide="pause" class="w-5 h-5"></i>
+                        <span>Pause</span>
+                    </button>
+                    <button id="btn-timer-reset" onclick="resetTimer()" class="bg-tactical-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold py-3 rounded-xl flex items-center justify-center space-x-2 transition-all">
+                        <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+
+                <!-- Log Workout Button -->
+                <button onclick="logCompletedWorkout()" class="w-full bg-tactical-800 hover:bg-slate-700 border border-amber-500/30 text-amber-400 font-semibold py-3 px-4 rounded-xl flex items-center justify-center space-x-2 text-sm transition-colors">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 text-amber-500"></i>
+                    <span>Einheit als absolviert im Protokoll loggen</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 4: IKMF TECHNIK-KATALOG -->
+        <section id="tab-catalog" class="tab-content space-y-6 hidden">
+            <div class="bg-tactical-900 border border-tactical-700 rounded-2xl p-5 md:p-6 shadow-md space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <i data-lucide="book-open" class="w-5 h-5 text-amber-500"></i>
+                            IKMF P1 & P2 Technik-Katalog
+                        </h2>
+                        <p class="text-xs text-slate-400">Systematisches Curriculum mit Biomechanik-Cues, YouTube-Demonstrationen & Status-Tracker.</p>
+                    </div>
+
+                    <button onclick="openAddTechniqueModal()" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-tactical-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md self-start md:self-auto">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                        <span>+ Eigene Technik hinzufügen</span>
+                    </button>
+                </div>
+
+                <!-- Search Bar & Category Filter Bar -->
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-grow">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                        <input type="text" id="catalog-search" oninput="renderTechniqueCatalog()" placeholder="Technik suchen (z.B. Inside Defense, Choke...)" class="w-full bg-tactical-950 text-slate-200 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-amber-500">
+                    </div>
+
+                    <select id="catalog-category-filter" onchange="renderTechniqueCatalog()" class="bg-tactical-950 text-slate-300 border border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500">
+                        <option value="all">Alle Kategorien</option>
+                        <option value="p1">P1 Basis-Techniken</option>
+                        <option value="striking">P2 Striking & Kicks</option>
+                        <option value="defense">P2 Abwehr (Stand)</option>
+                        <option value="grappling">P2 Würgen & Boden</option>
+                        <option value="weapon">P2 Stock & Taktik</option>
+                    </select>
+                </div>
+
+                <!-- Techniques Grid Container -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2" id="catalog-cards-container">
+                    <!-- 24+ techniques loaded dynamically by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: AUGEN-ZU STRESS-DRILL -->
+        <section id="tab-drill" class="tab-content space-y-6 hidden">
+            <div class="bg-tactical-900 border border-tactical-700 rounded-2xl p-5 md:p-8 shadow-xl max-w-2xl mx-auto space-y-6">
+                <div class="text-center space-y-2">
+                    <div class="inline-flex items-center space-x-1.5 bg-red-500/10 text-red-400 border border-red-500/20 px-3 py-1 rounded-full text-xs font-bold uppercase">
+                        <i data-lucide="eye-off" class="w-3.5 h-3.5"></i>
+                        <span>Reaktions- & Stress-Generator</span>
+                    </div>
+                    <h2 class="text-2xl font-black text-white">Augen-Zu Stress-Drill</h2>
+                    <p class="text-xs text-slate-400 max-w-md mx-auto">Schliesse die Augen. Die App ruft in unregelmässigen Abständen zufällige P2-Angriffe auf Deutsch ab. Reagiere explosiv aus der Bewegung!</p>
+                </div>
+
+                <!-- Settings Box -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-tactical-950 p-4 rounded-xl border border-slate-800 text-xs">
+                    <div>
+                        <label class="font-medium text-slate-300 block mb-1">Zufalls-Intervall:</label>
+                        <select id="drill-interval-setting" class="w-full bg-tactical-800 text-amber-400 font-bold border border-slate-700 rounded-lg p-2 focus:outline-none">
+                            <option value="3-6">Schnell (3 – 6 Sek)</option>
+                            <option value="5-10" selected>Standard (5 – 10 Sek)</option>
+                            <option value="8-14">Erholt (8 – 14 Sek)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="font-medium text-slate-300 block mb-1">Angriffs-Kategorie:</label>
+                        <select id="drill-category-setting" class="w-full bg-tactical-800 text-amber-400 font-bold border border-slate-700 rounded-lg p-2 focus:outline-none">
+                            <option value="all">Alle P1 & P2 Angriffe</option>
+                            <option value="strikes">Nur Schläge / Tritte</option>
+                            <option value="chokes">Nur Würgen / Griffe</option>
+                            <option value="ground">Nur Boden / Wand</option>
+                            <option value="stick">Stock / 360-Grad</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Visual Cue Box -->
+                <div class="bg-tactical-950 border-2 border-red-500/30 rounded-2xl p-8 text-center min-h-[180px] flex flex-col items-center justify-center space-y-3 relative">
+                    <div id="drill-status-text" class="text-xs font-bold tracking-widest text-slate-500 uppercase">Drill Bereit</div>
+                    <div id="drill-attack-display" class="text-2xl sm:text-3xl font-black text-amber-400">---</div>
+                    <div id="drill-cue-display" class="text-xs text-slate-400 italic max-w-sm">Starte den Drill, schliesse die Augen und horche auf das Signal!</div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="grid grid-cols-2 gap-4">
+                    <button id="btn-drill-start" onclick="startStressDrill()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-red-600/20 transition-all">
+                        <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                        <span>Drill Starten</span>
+                    </button>
+                    <button id="btn-drill-stop" onclick="stopStressDrill()" disabled class="bg-tactical-800 opacity-50 border border-slate-700 text-slate-300 font-bold py-3.5 rounded-xl flex items-center justify-center space-x-2 transition-all">
+                        <i data-lucide="square" class="w-5 h-5"></i>
+                        <span>Stopp</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- BACKUP & SYNC MODAL -->
+    <div id="backup-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-tactical-900 border border-tactical-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
+            <button onclick="closeBackupModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                    <i data-lucide="database" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Backup & Geräte-Sync</h3>
+                    <p class="text-xs text-slate-400">Sichere deinen Trainingsfortschritt oder übertrage ihn aufs Handy.</p>
+                </div>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="space-y-2 pt-1">
+                <label class="text-xs font-bold text-slate-300 block">1. Daten Sichern (Exportieren)</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="exportDataAsJSON()" class="bg-tactical-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold py-2.5 px-3 rounded-xl flex items-center justify-center space-x-2 transition-colors">
+                        <i data-lucide="download" class="w-4 h-4 text-amber-500"></i>
+                        <span>JSON-Datei Download</span>
+                    </button>
+                    <button onclick="copyDataToClipboard()" class="bg-tactical-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold py-2.5 px-3 rounded-xl flex items-center justify-center space-x-2 transition-colors">
+                        <i data-lucide="copy" class="w-4 h-4 text-emerald-400"></i>
+                        <span>In Zwischenablage</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div class="space-y-2 pt-2 border-t border-slate-800">
+                <label class="text-xs font-bold text-slate-300 block">2. Daten Wiederherstellen / Importieren</label>
+                
+                <!-- File Import Input -->
+                <div class="flex items-center gap-2">
+                    <input type="file" id="import-file-input" accept=".json" class="hidden" onchange="importDataFromFile(event)">
+                    <button onclick="document.getElementById('import-file-input').click()" class="w-full bg-tactical-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold py-2.5 px-3 rounded-xl flex items-center justify-center space-x-2 transition-colors">
+                        <i data-lucide="upload" class="w-4 h-4 text-amber-500"></i>
+                        <span>JSON-Backup Datei Auswählen</span>
+                    </button>
+                </div>
+
+                <!-- Text Area Paste Fallback -->
+                <div class="space-y-1.5 pt-1">
+                    <textarea id="import-text-area" rows="3" placeholder="Oder kopierten JSON-Code hier einfügen..." class="w-full bg-tactical-950 text-slate-300 text-xs border border-slate-700 rounded-xl p-3 focus:outline-none focus:border-amber-500 font-mono"></textarea>
+                    <button onclick="importDataFromText()" class="w-full bg-amber-500 hover:bg-amber-600 text-tactical-950 font-bold text-xs py-2 rounded-xl transition-colors">
+                        Text-Backup Anwenden
+                    </button>
+                </div>
+            </div>
+
+            <!-- Danger Zone / Reset -->
+            <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+                <span class="text-xs text-slate-500">Standardwerte wiederherstellen?</span>
+                <button onclick="resetAllAppData()" class="text-xs text-red-400 hover:text-red-300 font-semibold underline">
+                    App Zurücksetzen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD CUSTOM TECHNIQUE MODAL -->
+    <div id="tech-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-tactical-900 border border-tactical-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative">
+            <button onclick="closeAddTechniqueModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-5 h-5 text-amber-500"></i>
+                Eigene Technik hinzufügen
+            </h3>
+
+            <form onsubmit="handleSaveCustomTechnique(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="text-slate-300 font-medium block mb-1">Technik Name (DE & EN)</label>
+                    <input type="text" id="custom-tech-name" required placeholder="z.B. Hammerfist diagonal (Hammerfaust)" class="w-full bg-tactical-950 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-slate-300 font-medium block mb-1">Stufe / Level</label>
+                        <select id="custom-tech-level" class="w-full bg-tactical-950 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+                            <option value="P2">P2 Advanced</option>
+                            <option value="P1">P1 Basis</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-slate-300 font-medium block mb-1">Kategorie</label>
+                        <select id="custom-tech-category" class="w-full bg-tactical-950 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none">
+                            <option value="striking">Striking & Kicks</option>
+                            <option value="defense">Abwehr (Stand)</option>
+                            <option value="grappling">Würgen & Boden</option>
+                            <option value="weapon">Stock & Taktik</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-slate-300 font-medium block mb-1">Kurzbeschreibung</label>
+                    <textarea id="custom-tech-desc" rows="2" placeholder="Wichtige Prinzipien & Ausführung..." class="w-full bg-tactical-950 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="text-slate-300 font-medium block mb-1">YouTube Link (Optional)</label>
+                    <input type="url" id="custom-tech-yt" placeholder="https://www.youtube.com/watch?v=..." class="w-full bg-tactical-950 border border-slate-700 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-tactical-950 font-bold text-sm py-3 rounded-xl transition-all shadow-md mt-2">
+                    Technik Speichern
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- BOTTOM MOBILE NAVIGATION BAR -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-tactical-900 border-t border-slate-800 z-40 safe-area-bottom">
+        <div class="grid grid-cols-5 text-center text-[10px] font-semibold py-1.5 text-slate-400">
+            <button onclick="switchTab('dashboard')" id="nav-mob-dashboard" class="tab-mob-btn flex flex-col items-center py-1 text-amber-400">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 mb-0.5"></i>
+                <span>Home</span>
+            </button>
+            <button onclick="switchTab('planner')" id="nav-mob-planner" class="tab-mob-btn flex flex-col items-center py-1 hover:text-slate-200">
+                <i data-lucide="calendar" class="w-5 h-5 mb-0.5"></i>
+                <span>Planer</span>
+            </button>
+            <button onclick="switchTab('timer')" id="nav-mob-timer" class="tab-mob-btn flex flex-col items-center py-1 hover:text-slate-200">
+                <i data-lucide="timer" class="w-5 h-5 mb-0.5"></i>
+                <span>Timer</span>
+            </button>
+            <button onclick="switchTab('catalog')" id="nav-mob-catalog" class="tab-mob-btn flex flex-col items-center py-1 hover:text-slate-200">
+                <i data-lucide="book-open" class="w-5 h-5 mb-0.5"></i>
+                <span>Katalog</span>
+            </button>
+            <button onclick="switchTab('drill')" id="nav-mob-drill" class="tab-mob-btn flex flex-col items-center py-1 hover:text-slate-200">
+                <i data-lucide="zap" class="w-5 h-5 mb-0.5"></i>
+                <span>Drill</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- JAVASCRIPT APPLICATION CORE -->
+    <script>
+        /* ----------------------------------------------------
+           1. INITIAL STATE & CONSTANTS
+        ---------------------------------------------------- */
+        const STORAGE_KEY = 'ikmf_p2_coach_app_state_v2';
+
+        // Pre-defined IKMF P1 & P2 Curriculum Dataset (24+ Verified Techniques)
+        const DEFAULT_TECHNIQUES = [
+            // P1 BASIS
+            { id: 'p1_stance', level: 'P1', category: 'p1', name_de: 'Fighting Stance & Footwork (Star Drill)', name_en: 'Fighting Stance & Footwork', desc: 'Grundlegende Kampfstellung, Ellbogen schützen Rippen, Kinn gesenkt. Bewegung in alle 4 Richtungen.', cues: ['Stabilen Schwerpunkt halten', 'Niemals Beine kreuzen'], youtube: 'https://www.youtube.com/watch?v=U00AL9JWszI', status: 2, notes: '' },
+            { id: 'p1_punches', level: 'P1', category: 'p1', name_de: 'Gerade Schläge (Links/Rechts)', name_en: 'Straight Punches (Left/Right)', desc: 'Explosiver Stoß aus Hüft- und Schulterrotation. Rückzug auf kürzestem Weg zur Deckung.', cues: ['Fausftflache im Treffmoment eindrehen', 'Deckung an der Wange halten'], youtube: 'https://www.youtube.com/watch?v=R41ZHKb7nqA', status: 2, notes: '' },
+            { id: 'p1_palm_elbow', level: 'P1', category: 'p1', name_de: 'Handballenstöße & Ellbogen (1–7)', name_en: 'Palm Heel & Elbow Strikes', desc: 'Verheerende Nahkampf-Stöße. Handballen schützt Finger; Ellbogen nutzen Körpergewicht.', cues: ['Körperschwerpunkt absenken', 'Maximale Rotation'], youtube: 'https://www.youtube.com/watch?v=rvCFTuPOSUU', status: 2, notes: '' },
+            { id: 'p1_kicks', level: 'P1', category: 'p1', name_de: 'Vorwärts-Tritte (Genitalien/Push)', name_en: 'Front Kick (Groin/Push)', desc: 'Schnapptritt zum Genitalbereich oder Vorwärts-Schubtritt zur Hüfte.', cues: ['Knie zuerst hochziehen', 'Mit Spann oder Ballen treffen'], youtube: 'https://www.youtube.com/watch?v=R41ZHKb7nqA', status: 2, notes: '' },
+            { id: 'p1_360_outside', level: 'P1', category: 'p1', name_de: '360-Grad Außenabwehr', name_en: '360 Degree Defense', desc: 'Abwehr gegen kreisförmige Angriffe mit Messer oder Faust. Unterarm wie ein Schild im 90°-Winkel.', cues: ['Simultaner Konterschlag', 'Aggressiv nach vorne gehen'], youtube: 'https://www.youtube.com/watch?v=AQqzE72jQN4', status: 2, notes: '' },
+            { id: 'p1_choke_pluck', level: 'P1', category: 'p1', name_de: 'Würge-Abwehr Stand (Plucking)', name_en: 'Choke Release Standing (Plucking)', desc: 'Hakenförmiges Wegreißen der Daumen des Angreifers mit simultanem Kontertritt.', cues: ['Explosives Zupfen (Hooks)', 'Direkter Gegenangriff'], youtube: 'https://www.youtube.com/watch?v=AQqzE72jQN4', status: 2, notes: '' },
+            { id: 'p1_fall_getup', level: 'P1', category: 'p1', name_de: 'Sturzabrollung & Taktisches Aufstehen', name_en: 'Fall Breaks & Tactical Get-Up', desc: 'Sicheres Abfangen von Stürzen nach hinten/seite. Aufstehen mit Blick zum Gegner und Deckung.', cues: ['Kinn auf die Brust', 'Bein schützt den Abstand'], youtube: 'https://www.youtube.com/watch?v=nRTVJNwpHGM', status: 2, notes: '' },
+
+            // P2 STRIKING & KICKS
+            { id: 'p2_hammerfists', level: 'P2', category: 'striking', name_de: 'Hammerfäuste (alle Richtungen)', name_en: 'Hammerfists (Side/Back/Down)', desc: 'Wuchtige Schläge mit der Unterseite der Faust. Ausführung nach vorne, seitlich, hinten und unten.', cues: ['Ganzkörpereinsatz über die Hüfte', 'Blick zum Ziel vor dem Schlag'], youtube: 'https://www.youtube.com/watch?v=U00AL9JWszI', status: 1, notes: '' },
+            { id: 'p2_hooks', level: 'P2', category: 'striking', name_de: 'Seitwärtshaken (Hook Punches)', name_en: 'Hook Punches', desc: 'Kreisförmiger Schlag zur Schläfe/Kiefer. Ellbogen auf einer Höhe mit der Faust.', cues: ['Fuß & Hüfte eindrehen', 'Zweite Hand deckt Kinn'], youtube: 'https://www.youtube.com/watch?v=R41ZHKb7nqA', status: 1, notes: '' },
+            { id: 'p2_uppercut', level: 'P2', category: 'striking', name_de: 'Aufwärtshaken (Uppercut)', name_en: 'Uppercut', desc: 'Vertikaler Schlag von unten zum Kinn oder Solarplexus aus gebeugten Knien.', cues: ['Aus den Beinen hochdrücken', 'Kurze, kompakte Bahn'], youtube: 'https://www.youtube.com/watch?v=R41ZHKb7nqA', status: 1, notes: '' },
+            { id: 'p2_roundhouse', level: 'P2', category: 'striking', name_de: 'Roundhouse Kick (Schienbein)', name_en: 'Roundhouse Kick', desc: 'Kreistritt mit dem Schienbein zum Oberschenkel (Low Kick) oder Rippen.', cues: ['Standfuß ausdrehen', 'Hüfte voll eindrehen'], youtube: 'https://www.youtube.com/watch?v=c9iHtuPn1lY', status: 1, notes: '' },
+            { id: 'p2_def_front_kick', level: 'P2', category: 'striking', name_de: 'Defensiver Stopp-Kick', name_en: 'Defensive Front Kick', desc: 'Stopptritt mit der Ferse/Sohle gegen heranrückende Angreifer zur Distanzkontrolle.', cues: ['Oberkörper leicht zurücklehnen', 'Hüfte nach vorne stoßen'], youtube: 'https://www.youtube.com/watch?v=R41ZHKb7nqA', status: 1, notes: '' },
+            { id: 'p2_side_kick', level: 'P2', category: 'striking', name_de: 'Seitwärts-Tritt (Side Kick)', name_en: 'Defensive Side Kick', desc: 'Kraftvoller Kick zur Seite/nach vorne mit der Fersenkante.', cues: ['Knie dicht am Körper vorbeiführen', 'Ferse drückt durch'], youtube: 'https://www.youtube.com/watch?v=c9iHtuPn1lY', status: 1, notes: '' },
+
+            // P2 ABWEHR STAND
+            { id: 'p2_inside_simultan', level: 'P2', category: 'defense', name_de: 'Inside Defense mit simultanem Konter', name_en: 'Inside Defense with Simultaneous Counter', desc: 'Abwehr gegen geraden Schlag mit der Handfeuer-Bewegung bei GLEICHZEITIGEM Konterschlag.', cues: ['Abwehrhand und Konterhand treffen synchron', 'Kopf leicht aus der Angriffslinie'], youtube: 'https://www.youtube.com/watch?v=BdDdyjTc6ec', status: 1, notes: '' },
+            { id: 'p2_outside_defense', level: 'P2', category: 'defense', name_de: 'Outside Defense gegen gerade Schläge', name_en: 'Outside Defense vs Straight Punches', desc: 'Umleitende Abwehr nach außen mit dem Unterarm und raschem Konter.', cues: ['Angriff nach außen ablenken', 'Hüfte nach vorne drücken'], youtube: 'https://www.youtube.com/watch?v=MGqkJZERX5g', status: 0, notes: '' },
+            { id: 'p2_inside_forearm', level: 'P2', category: 'defense', name_de: 'Inside Forearm Defense', name_en: 'Inside Forearm Defense', desc: 'Unterarm-Abwehr gegen tiefe oder mittlere gerade Angriffe.', cues: ['Kompakter Schild', 'Sofortige Konterserie anschließen'], youtube: 'https://www.youtube.com/watch?v=suGDYKDB9Sw', status: 0, notes: '' },
+
+            // P2 WÜRGEN & BODEN
+            { id: 'p2_choke_wall', level: 'P2', category: 'grappling', name_de: 'Würge-Abwehr an der Wand', name_en: 'Choke Release vs Wall', desc: 'Befreiung wenn man gegen eine Wand gedrückt wird. Dreh-Schlag-Bewegung mit dem Arm.', cues: ['Arm hoch über die Hand des Angreifers schwingen', 'Körper explosiv drehen'], youtube: 'https://www.youtube.com/watch?v=AQqzE72jQN4', status: 1, notes: '' },
+            { id: 'p2_choke_ground', level: 'P2', category: 'grappling', name_de: 'Würge-Abwehr am Boden (Mount/Guard)', name_en: 'Choke Release on Ground', desc: 'Befreiung aus Würgegriff während Angreifer oben sitzt. Plucking, Brücke (Bridge) und Rollen.', cues: ['Explosiver Beckenhub (Bridge)', 'Arm des Angreifers festklammern'], youtube: 'https://www.youtube.com/watch?v=nRTVJNwpHGM', status: 1, notes: '' },
+            { id: 'p2_headlock_stand', level: 'P2', category: 'grappling', name_de: 'Headlock Befreiung im Stand (Seitlich)', name_en: 'Side Headlock Release Standing', desc: 'Befreiung aus seitlichem Schwitzenkasten. Leisten-Schlag, Hebel über das Gesicht.', cues: ['Kopf aufgerichtet halten', 'Gegner am Kinn/Augen nach hinten ziehen'], youtube: 'https://www.youtube.com/watch?v=hbWr4PGMCyg', status: 0, notes: '' },
+            { id: 'p2_headlock_ground', level: 'P2', category: 'grappling', name_de: 'Side Headlock Befreiung am Boden', name_en: 'Side Headlock Release on Ground', desc: 'Befreiung wenn man am Boden seitlich im Kitzler/Headlock fixiert wird.', cues: ['Bein über den Gegner schlagen', 'Gesicht freikämpfen & Brücke'], youtube: 'https://www.youtube.com/watch?v=hbWr4PGMCyg', status: 0, notes: '' },
+            { id: 'p2_bearhug_front', level: 'P2', category: 'grappling', name_de: 'Bear Hug von vorne (Frei & Eingeklemmt)', name_en: 'Bear Hug Defense (Front)', desc: 'Abwehr gegen Umklammerung von vorne. Raum schaffen, Genitalschlag, Kopf weghaken.', cues: ['Schwerpunkt sofort tief senken', 'Kopf des Angreifers wegschieben'], youtube: 'https://www.youtube.com/watch?v=AQqzE72jQN4', status: 1, notes: '' },
+            { id: 'p2_bearhug_back', level: 'P2', category: 'grappling', name_de: 'Bear Hug von hinten (Frei & Eingeklemmt)', name_en: 'Bear Hug Defense (Rear)', desc: 'Abwehr gegen Umklammerung von hinten. Fersenstoss zum Schienbein, Ellbogen, Ausdrehen.', cues: ['Tiefe Basis bilden', 'Hüfte rausdrehen für Ellbogen'], youtube: 'https://www.youtube.com/watch?v=AQqzE72jQN4', status: 1, notes: '' },
+
+            // P2 WAFFEN & TAKTIK
+            { id: 'p2_stick_defense', level: 'P2', category: 'weapon', name_de: 'Stock-Abwehr (Schwinger / 360-basiert)', name_en: 'Stick / Blunt Object Defense', desc: 'Abwehr gegen wuchtige Stockschläge von oben/seite mit 360°-Prinzip.', cues: ['Dem Angriff entgegengehen', 'Waffenarm sofort sichern & entwaffnen'], youtube: 'https://www.youtube.com/watch?v=AQqzE72jQN4', status: 0, notes: '' },
+            { id: 'p2_multiple_attackers', level: 'P2', category: 'weapon', name_de: 'Mehrere Angreifer & Tactical Scan', name_en: 'Multiple Attackers & Tactical Scan', desc: 'Positionierung zur Vermeidung von Einkreisung. Gegner als Schild nutzen.', cues: ['Niemals zwischen zwei Gegner geraten', 'Nach Konter sofort 360-Scan'], youtube: 'https://www.youtube.com/watch?v=rvCFTuPOSUU', status: 1, notes: '' }
+        ];
+
+        // Standard Weekly Schedule Presets
+        const DEFAULT_SCHEDULE = {
+            1: { active: true, title: 'IKMF Krav Maga Klasse', time: '19:00', duration: 60, type: 'ikmf', note: 'Fokus auf Partner-Drills & P2 Techniken' },
+            2: { active: true, title: 'Technik & Biomechanik', time: '18:00', duration: 30, type: 'technik', note: 'Inside Defense & simultane Konter' },
+            3: { active: true, title: 'Kombinationen & Flow', time: '18:00', duration: 30, type: 'kombis', note: 'Punches + Kicks + Taktisches Aufstehen' },
+            4: { active: false, title: 'Regeneration / Ruhetag', time: '18:00', duration: 30, type: 'rest', note: 'Mobilisation & Mentale Visualisierung' },
+            5: { active: true, title: 'Stress & Kondition', time: '18:00', duration: 30, type: 'stress', note: 'Prüfungs-Drills & Augen-Zu Generator' },
+            6: { active: false, title: 'Wochenend-Sparring', time: '10:00', duration: 45, type: 'kombis', note: 'Leichtkontakt-Flow & Szenarien' },
+            0: { active: false, title: 'Ruhetag', time: '10:00', duration: 30, type: 'rest', note: 'Erholung' }
+        };
+
+        // Standard Checklist Items
+        const DEFAULT_CHECKLIST = [
+            { id: 'c1', label: 'Technische Präzision & Simultaneität (Inside Def + Punch)', done: true },
+            { id: 'c2', label: 'Aggression & Fighting Spirit (Druck nach vorne)', done: true },
+            { id: 'c3', label: 'Stabile Balance & Taktische Beinarbeit', done: false },
+            { id: 'c4', label: 'Konsequenter Tactical Scan (360-Umgebungs-Blick)', done: false }
+        ];
+
+        // Global State Object
+        let appState = {
+            startDate: new Date().toISOString().split('T')[0],
+            examDate: getFutureDateMonths(6),
+            techniques: JSON.parse(JSON.stringify(DEFAULT_TECHNIQUES)),
+            schedule: JSON.parse(JSON.stringify(DEFAULT_SCHEDULE)),
+            checklist: JSON.parse(JSON.stringify(DEFAULT_CHECKLIST)),
+            completedLogsCount: 12,
+            activeTab: 'dashboard'
+        };
+
+        // Timer State Variables
+        let timerInterval = null;
+        let timerTimeLeft = 1800; // 30 min in sec
+        let timerTotalTime = 1800;
+        let timerIsRunning = false;
+        let timerMuted = false;
+        let currentTimerPreset = 'technik';
+
+        // Drill State Variables
+        let drillIntervalTimeout = null;
+        let drillIsRunning = false;
+
+        // WakeLock Reference
+        let wakeLockSentinel = null;
+        let wakeLockUserRequested = true;
+
+        /* ----------------------------------------------------
+           2. HELPER UTILITIES
+        ---------------------------------------------------- */
+        function getFutureDateMonths(months) {
+            const d = new Date();
+            d.setMonth(d.getMonth() + months);
+            return d.toISOString().split('T')[0];
+        }
+
+        function saveAppState() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            } catch(e) {
+                console.error('Storage save error:', e);
+            }
+        }
+
+        function loadAppState() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    appState = Object.assign({}, appState, parsed);
+                }
+            } catch(e) {
+                console.warn('Fallback to default state:', e);
+            }
+        }
+
+        /* ----------------------------------------------------
+           3. SCREEN WAKE LOCK API MANAGER
+        ---------------------------------------------------- */
+        async function requestWakeLock() {
+            if (!('wakeLock' in navigator)) {
+                updateWakeLockUI(false, 'Nicht unterstützt');
+                return;
+            }
+            if (!wakeLockUserRequested) return;
+
+            try {
+                wakeLockSentinel = await navigator.wakeLock.request('screen');
+                updateWakeLockUI(true, 'Bildschirm aktiv');
+
+                wakeLockSentinel.addEventListener('release', () => {
+                    if (!timerIsRunning && !drillIsRunning) {
+                        updateWakeLockUI(false, 'Standby erlaubt');
+                    }
+                });
+            } catch (err) {
+                console.warn(`Wake Lock Request failed: ${err.name}, ${err.message}`);
+                updateWakeLockUI(false, 'Deaktiviert');
+            }
+        }
+
+        async function releaseWakeLock() {
+            if (wakeLockSentinel !== null) {
+                try {
+                    await wakeLockSentinel.release();
+                    wakeLockSentinel = null;
+                } catch(e) {}
+            }
+            updateWakeLockUI(false, 'Standby erlaubt');
+        }
+
+        function toggleWakeLockManual() {
+            wakeLockUserRequested = !wakeLockUserRequested;
+            if (wakeLockUserRequested) {
+                requestWakeLock();
+            } else {
+                releaseWakeLock();
+            }
+        }
+
+        function updateWakeLockUI(active, text) {
+            const icon = document.getElementById('wakelock-icon');
+            const txt = document.getElementById('wakelock-text');
+            const btn = document.getElementById('wakelock-btn');
+            const timerStatus = document.getElementById('timer-wakelock-status');
+
+            if (active) {
+                if (icon) icon.className = 'w-4 h-4 text-emerald-400';
+                if (txt) txt.textContent = text;
+                if (btn) btn.className = 'px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center space-x-1.5 text-xs transition-colors';
+                if (timerStatus) timerStatus.textContent = 'Wake-Lock aktiv';
+            } else {
+                if (icon) icon.className = 'w-4 h-4 text-slate-400';
+                if (txt) txt.textContent = text;
+                if (btn) btn.className = 'px-2.5 py-1.5 rounded-lg bg-tactical-800 border border-slate-700 text-slate-400 flex items-center space-x-1.5 text-xs transition-colors';
+                if (timerStatus) timerStatus.textContent = 'Wake-Lock aus';
+            }
+        }
+
+        // Re-activate wake lock when returning to tab
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLockSentinel !== null && document.visibilityState === 'visible') {
+                if (timerIsRunning || drillIsRunning) {
+                    await requestWakeLock();
+                }
+            }
+        });
+
+        /* ----------------------------------------------------
+           4. AUDIO SIGNAL SYNTHESIZER (WEB AUDIO API)
+        ---------------------------------------------------- */
+        let audioCtx = null;
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playBeep(freq = 440, duration = 0.15, type = 'sine') {
+            if (timerMuted) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + duration);
+            } catch(e) {}
+        }
+
+        function playGongSound() {
+            if (timerMuted) return;
+            try {
+                const ctx = getAudioContext();
+                if (!ctx) return;
+                // Double chime gong simulation
+                playBeep(587.33, 0.4, 'triangle'); // D5
+                setTimeout(() => playBeep(880, 0.8, 'sine'), 150); // A5
+            } catch(e) {}
+        }
+
+        /* ----------------------------------------------------
+           5. NAVIGATION & TABS
+        ---------------------------------------------------- */
+        function switchTab(tabId) {
+            appState.activeTab = tabId;
+            saveAppState();
+
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            
+            // Show target
+            const target = document.getElementById(`tab-${tabId}`);
+            if (target) target.classList.remove('hidden');
+
+            // Update Nav Desktop
+            document.querySelectorAll('.tab-desk-btn').forEach(btn => {
+                btn.className = 'tab-desk-btn px-4 py-2 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2 text-slate-400';
+            });
+            const activeDeskNav = document.getElementById(`nav-desk-${tabId}`);
+            if (activeDeskNav) {
+                activeDeskNav.className = 'tab-desk-btn px-4 py-2 border-b-2 border-amber-500 text-amber-400 flex items-center gap-2 font-bold';
+            }
+
+            // Update Nav Mobile
+            document.querySelectorAll('.tab-mob-btn').forEach(btn => {
+                btn.className = 'tab-mob-btn flex flex-col items-center py-1 text-slate-400 hover:text-slate-200';
+            });
+            const activeMobNav = document.getElementById(`nav-mob-${tabId}`);
+            if (activeMobNav) {
+                activeMobNav.className = 'tab-mob-btn flex flex-col items-center py-1 text-amber-400 font-bold';
+            }
+
+            // Trigger tab specific renders
+            if (tabId === 'dashboard') renderDashboard();
+            if (tabId === 'planner') renderWeeklyPlanner();
+            if (tabId === 'catalog') renderTechniqueCatalog();
+        }
+
+        /* ----------------------------------------------------
+           6. DASHBOARD & EXAM ROADMAP CALCULATIONS
+        ---------------------------------------------------- */
+        function renderDashboard() {
+            const today = new Date();
+            const exam = new Date(appState.examDate);
+            const start = new Date(appState.startDate);
+
+            // Date picker binding
+            const picker = document.getElementById('exam-date-picker');
+            if (picker) picker.value = appState.examDate;
+
+            // Difference in days
+            const diffTime = exam - today;
+            const daysLeft = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+            const weeksLeft = Math.ceil(daysLeft / 7);
+
+            // Active sessions calculation
+            let activeDaysCountPerWeek = 0;
+            Object.values(appState.schedule).forEach(day => {
+                if (day.active) activeDaysCountPerWeek++;
+            });
+            const sessionsLeft = Math.ceil(weeksLeft * activeDaysCountPerWeek);
+
+            // Technique stats
+            const totalTechs = appState.techniques.length;
+            const masteredTechs = appState.techniques.filter(t => t.status === 2).length;
+            const techPercent = totalTechs > 0 ? Math.round((masteredTechs / totalTechs) * 100) : 0;
+
+            // Readiness Score calculation (60% Tech + 40% Completed Logs)
+            const logScore = Math.min(100, Math.round((appState.completedLogsCount / 30) * 100));
+            const totalReadiness = Math.round((techPercent * 0.6) + (logScore * 0.4));
+
+            let rankTitle = 'P1 Basis';
+            if (totalReadiness >= 40) rankTitle = 'P2 Striker';
+            if (totalReadiness >= 70) rankTitle = 'Tactical Fighter';
+            if (totalReadiness >= 90) rankTitle = 'Prüfungsbereit';
+
+            // UI updates
+            document.getElementById('header-days-count').textContent = `${daysLeft} Tage`;
+            document.getElementById('dash-days-left').textContent = daysLeft;
+            document.getElementById('dash-weeks-left').textContent = `${weeksLeft} Wochen`;
+            document.getElementById('dash-sessions-left').textContent = sessionsLeft;
+            document.getElementById('dash-technique-percent').textContent = `${techPercent}%`;
+            document.getElementById('dash-technique-count').textContent = `${masteredTechs} von ${totalTechs} sicher`;
+            document.getElementById('dash-readiness-score').textContent = `${totalReadiness}%`;
+            document.getElementById('dash-readiness-rank').textContent = rankTitle;
+
+            // Render Roadmap
+            renderRoadmapPhases(start, exam, today);
+
+            // Render Next Workout
+            renderNextWorkoutCard();
+
+            // Render Examiner Checklist
+            renderExaminerChecklist();
+        }
+
+        function updateExamDate(newDateStr) {
+            if (!newDateStr) return;
+            appState.examDate = newDateStr;
+            saveAppState();
+            renderDashboard();
+        }
+
+        function addMonthsToExam(months) {
+            const current = new Date(appState.examDate || new Date());
+            current.setMonth(current.getMonth() + months);
+            appState.examDate = current.toISOString().split('T')[0];
+            saveAppState();
+            renderDashboard();
+        }
+
+        function renderRoadmapPhases(startDate, examDate, todayDate) {
+            const totalDuration = examDate - startDate;
+            const elapsed = todayDate - startDate;
+            const progressRatio = totalDuration > 0 ? Math.min(1, Math.max(0, elapsed / totalDuration)) : 0;
+
+            const phases = [
+                { id: 1, title: 'Phase 1: Grundlagen & P2-Aufbau', share: 0.35, desc: 'Technik-Repertoire erlernen & Biomechanik festigen' },
+                { id: 2, title: 'Phase 2: Kombis & Nahkampf/Boden', share: 0.35, desc: 'Flüssige Übergänge, Hebel & Befreiungen' },
+                { id: 3, title: 'Phase 3: Stress-Integration', share: 0.20, desc: 'Reaktion unter Erschöpfung & Dunkelheit/Augen-Zu' },
+                { id: 4, title: 'Phase 4: Feinschliff & Tapering', share: 0.10, desc: 'Prüfungssimulation, Mentale Härte & Erholung' }
+            ];
+
+            let cumulative = 0;
+            let currentPhaseId = 1;
+            const container = document.getElementById('roadmap-phases-container');
+            container.innerHTML = '';
+
+            phases.forEach(phase => {
+                const phaseStart = cumulative;
+                const phaseEnd = cumulative + phase.share;
+                cumulative = phaseEnd;
+
+                const isActive = progressRatio >= phaseStart && progressRatio < phaseEnd;
+                const isPassed = progressRatio >= phaseEnd;
+                if (isActive) currentPhaseId = phase.id;
+
+                const card = document.createElement('div');
+                card.className = `p-3.5 rounded-xl border text-xs flex flex-col justify-between space-y-2 transition-all ${
+                    isActive ? 'bg-amber-500/10 border-amber-500 text-amber-400 font-semibold shadow-md' :
+                    isPassed ? 'bg-tactical-950 border-emerald-500/40 text-emerald-400/90 opacity-80' :
+                    'bg-tactical-950 border-slate-800 text-slate-400'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-200">${phase.title}</span>
+                        ${isActive ? '<span class="text-[10px] bg-amber-500 text-tactical-950 px-1.5 py-0.5 rounded font-black">AKTIV</span>' : ''}
+                        ${isPassed ? '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>' : ''}
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">${phase.desc}</p>
+                `;
+                container.appendChild(card);
+            });
+
+            document.getElementById('dash-current-phase-badge').textContent = `Phase ${currentPhaseId} Aktiv`;
+            lucide.createIcons();
+        }
+
+        function renderNextWorkoutCard() {
+            const todayDayIdx = new Date().getDay(); // 0-6
+            let targetDayIdx = todayDayIdx;
+            let found = false;
+
+            // Search next active day
+            for (let i = 0; i < 7; i++) {
+                const checkIdx = (todayDayIdx + i) % 7;
+                if (appState.schedule[checkIdx] && appState.schedule[checkIdx].active) {
+                    targetDayIdx = checkIdx;
+                    found = true;
+                    break;
+                }
+            }
+
+            const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+            const workout = found ? appState.schedule[targetDayIdx] : { title: 'Freies Training', duration: 30, time: '18:00', note: 'Allgemeiner P2 Technik-Drill' };
+
+            document.getElementById('next-workout-day-badge').textContent = targetDayIdx === todayDayIdx ? 'Heute' : dayNames[targetDayIdx];
+            document.getElementById('next-workout-title').textContent = workout.title;
+            document.getElementById('next-workout-desc').textContent = workout.note || 'Regelmässige P2 Wiederholung.';
+            document.getElementById('next-workout-time').textContent = `${workout.time} Uhr`;
+            document.getElementById('next-workout-duration').textContent = `${workout.duration} Min`;
+        }
+
+        function startWorkoutFromDashboard() {
+            switchTab('timer');
+            selectTimerPreset('technik');
+            startTimer();
+        }
+
+        function renderExaminerChecklist() {
+            const container = document.getElementById('examiner-checklist');
+            container.innerHTML = '';
+
+            appState.checklist.forEach((item, idx) => {
+                const row = document.createElement('label');
+                row.className = `flex items-start space-x-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                    item.done ? 'bg-emerald-500/10 border-emerald-500/30 text-slate-200' : 'bg-tactical-950 border-slate-800 text-slate-400'
+                }`;
+                row.innerHTML = `
+                    <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleChecklistItem(${idx})" class="mt-0.5 rounded border-slate-700 text-emerald-500 focus:ring-emerald-500 bg-tactical-800">
+                    <span class="leading-snug">${item.label}</span>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function toggleChecklistItem(index) {
+            appState.checklist[index].done = !appState.checklist[index].done;
+            saveAppState();
+            renderExaminerChecklist();
+        }
+
+        /* ----------------------------------------------------
+           7. FLEXIBLE WEEKLY PLANNER
+        ---------------------------------------------------- */
+        function renderWeeklyPlanner() {
+            const container = document.getElementById('planner-days-container');
+            container.innerHTML = '';
+
+            const dayOrder = [1, 2, 3, 4, 5, 6, 0]; // Mo - So
+            const dayLabels = { 1: 'Montag', 2: 'Dienstag', 3: 'Mittwoch', 4: 'Donnerstag', 5: 'Freitag', 6: 'Samstag', 0: 'Sonntag' };
+
+            dayOrder.forEach(dayKey => {
+                const data = appState.schedule[dayKey] || { active: false, title: 'Ruhetag', time: '18:00', duration: 30, type: 'rest', note: '' };
+
+                const card = document.createElement('div');
+                card.className = `bg-tactical-950 border rounded-xl p-4 space-y-3 transition-all ${
+                    data.active ? 'border-amber-500/40 shadow-md' : 'border-slate-800 opacity-75'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-200 text-sm">${dayLabels[dayKey]}</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" ${data.active ? 'checked' : ''} onchange="updatePlannerDay(${dayKey}, 'active', this.checked)" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+                        </label>
+                    </div>
+
+                    ${data.active ? `
+                        <div class="space-y-2.5 text-xs">
+                            <div>
+                                <label class="text-slate-400 block mb-0.5">Fokus / Einheit Name:</label>
+                                <input type="text" value="${data.title}" onchange="updatePlannerDay(${dayKey}, 'title', this.value)" class="w-full bg-tactical-900 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-slate-400 block mb-0.5">Uhrzeit:</label>
+                                    <input type="time" value="${data.time}" onchange="updatePlannerDay(${dayKey}, 'time', this.value)" class="w-full bg-tactical-900 border border-slate-700 rounded-lg p-1.5 text-amber-400 font-bold focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="text-slate-400 block mb-0.5">Dauer (Min):</label>
+                                    <input type="number" min="10" max="120" step="5" value="${data.duration}" onchange="updatePlannerDay(${dayKey}, 'duration', parseInt(this.value))" class="w-full bg-tactical-900 border border-slate-700 rounded-lg p-1.5 text-slate-200 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-slate-400 block mb-0.5">Notiz / IKMF Ziel:</label>
+                                <input type="text" value="${data.note}" onchange="updatePlannerDay(${dayKey}, 'note', this.value)" placeholder="z.B. Schulter-Rotation beachten..." class="w-full bg-tactical-900 border border-slate-700 rounded-lg p-2 text-slate-400 focus:outline-none">
+                            </div>
+
+                            <button onclick="startSpecificWorkout(${dayKey})" class="w-full mt-1 bg-tactical-800 hover:bg-amber-500 hover:text-tactical-950 border border-amber-500/30 text-amber-400 font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5">
+                                <i data-lucide="play" class="w-3.5 h-3.5"></i> Im Timer starten
+                            </button>
+                        </div>
+                    ` : `
+                        <p class="text-xs text-slate-500 italic">Ruhetag / Regeneration eingeplant.</p>
+                    `}
+                `;
+
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function updatePlannerDay(dayKey, field, value) {
+            if (!appState.schedule[dayKey]) appState.schedule[dayKey] = {};
+            appState.schedule[dayKey][field] = value;
+            saveAppState();
+            renderWeeklyPlanner();
+            renderDashboard();
+        }
+
+        function resetWeeklyPlanner() {
+            appState.schedule = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+            saveAppState();
+            renderWeeklyPlanner();
+            renderDashboard();
+        }
+
+        function startSpecificWorkout(dayKey) {
+            const workout = appState.schedule[dayKey];
+            if (workout) {
+                const minsSel = document.getElementById('timer-total-mins');
+                if (minsSel) minsSel.value = workout.duration || 30;
+                onTimerDurationChange();
+            }
+            switchTab('timer');
+            startTimer();
+        }
+
+        /* ----------------------------------------------------
+           8. INTERACTIVE INTERVAL TIMER & CUES
+        ---------------------------------------------------- */
+        const TIMER_CUES = {
+            technik: [
+                { title: 'Inside Defense (Gleichzeitiger Konter)', cue: 'Huftschnapp & synchrone Handfeuer-Abwehr beachten!' },
+                { title: 'Outside Forearm Defense', cue: 'Unterarm rechtzeitig als kompakten Schild aufbauen.' },
+                { title: 'Choke Release Plucking', cue: 'Explosiv zupfen, sofort Genitaltritt nachsetzen!' },
+                { title: 'Tactical Get-Up (Boden)', cue: 'Blick stets zum Gegner, hinteres Bein schützt Abstand.' }
+            ],
+            kombis: [
+                { title: 'Straight Punch + Low Kick Kombi', cue: 'Schlagkombination veranlasst Deckung oben, schlussfolgere Low Kick.' },
+                { title: 'Hammerfaust Serie 360', cue: 'Rundum-Schläge mit voller Hüft-Drehung unter Last.' },
+                { title: 'Front Kick + Ellbogen 1-7', cue: 'Distanz mit Kick schliessen, im Nahkampf Ellbogen durchziehen.' }
+            ],
+            stress: [
+                { title: 'Prüfungs-Sprint: 360-Grad Dauerfeuer', cue: 'Maximale Aggression & Ausdauer! Weiteratmen!' },
+                { title: 'Boden-Befreiung Mount / Choke', cue: 'Bridge & Roll explosiv! Keine Pause am Boden!' },
+                { title: 'Wand-Würge & Mehrere Angreifer', cue: 'Drehbewegung nutzen, sofort Tactical Scan durchführen!' }
+            ],
+            express: [
+                { title: '10-Min P2 Express Drill', cue: 'Höchste Intensität! Fokus auf saubere Biomechanik.' }
+            ]
+        };
+
+        function selectTimerPreset(presetKey) {
+            currentTimerPreset = presetKey;
+            document.querySelectorAll('.timer-preset-btn').forEach(btn => {
+                btn.className = 'timer-preset-btn p-3 rounded-xl border border-slate-700 bg-tactical-800 text-slate-300 text-left text-xs font-bold hover:border-slate-500 transition-all';
+            });
+            const activeBtn = document.getElementById(`preset-${presetKey}`);
+            if (activeBtn) {
+                activeBtn.className = 'timer-preset-btn p-3 rounded-xl border border-amber-500 bg-amber-500/10 text-amber-400 text-left text-xs font-bold transition-all';
+            }
+
+            updateTimerCueDisplay(0);
+        }
+
+        function onTimerDurationChange() {
+            const mins = parseInt(document.getElementById('timer-total-mins').value) || 30;
+            timerTotalTime = mins * 60;
+            timerTimeLeft = timerTotalTime;
+            updateTimerDisplayUI();
+        }
+
+        function startTimer() {
+            if (timerIsRunning) return;
+            timerIsRunning = true;
+
+            requestWakeLock();
+
+            document.getElementById('btn-timer-start').disabled = true;
+            document.getElementById('btn-timer-start').classList.add('opacity-50');
+            document.getElementById('btn-timer-pause').disabled = false;
+            document.getElementById('btn-timer-pause').classList.remove('opacity-50');
+
+            playGongSound();
+
+            timerInterval = setInterval(() => {
+                if (timerTimeLeft > 0) {
+                    timerTimeLeft--;
+                    updateTimerDisplayUI();
+
+                    // Countdown audio for last 3 seconds of intervals
+                    if (timerTimeLeft % 60 <= 3 && timerTimeLeft % 60 > 0) {
+                        playBeep(440, 0.1);
+                    } else if (timerTimeLeft % 60 === 0 && timerTimeLeft > 0) {
+                        playGongSound();
+                    }
+                } else {
+                    pauseTimer();
+                    playGongSound();
+                    alert('Trainingseinheit erfolgreich beendet! Starke Leistung.');
+                    logCompletedWorkout();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            timerIsRunning = false;
+            if (timerInterval) clearInterval(timerInterval);
+            releaseWakeLock();
+
+            document.getElementById('btn-timer-start').disabled = false;
+            document.getElementById('btn-timer-start').classList.remove('opacity-50');
+            document.getElementById('btn-timer-pause').disabled = true;
+            document.getElementById('btn-timer-pause').classList.add('opacity-50');
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            onTimerDurationChange();
+        }
+
+        function toggleTimerMute() {
+            timerMuted = !timerMuted;
+            const icon = document.getElementById('icon-timer-mute');
+            const text = document.getElementById('text-timer-mute');
+
+            if (timerMuted) {
+                icon.className = 'w-4 h-4 text-slate-500';
+                text.textContent = 'Stumm';
+            } else {
+                icon.className = 'w-4 h-4 text-emerald-400';
+                text.textContent = 'Ton an';
+            }
+        }
+
+        function updateTimerDisplayUI() {
+            const mins = Math.floor(timerTimeLeft / 60);
+            const secs = timerTimeLeft % 60;
+            const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            document.getElementById('timer-display').textContent = formatted;
+
+            const percent = ((timerTotalTime - timerTimeLeft) / timerTotalTime) * 100;
+            document.getElementById('timer-progress-bar').style.width = `${percent}%`;
+
+            const currentRound = Math.floor((timerTotalTime - timerTimeLeft) / 180) + 1;
+            const totalRounds = Math.ceil(timerTotalTime / 180);
+            document.getElementById('timer-round-info').textContent = `Runde ${currentRound} / ${totalRounds}`;
+
+            updateTimerCueDisplay(currentRound - 1);
+        }
+
+        function updateTimerCueDisplay(roundIdx) {
+            const cues = TIMER_CUES[currentTimerPreset] || TIMER_CUES['technik'];
+            const item = cues[roundIdx % cues.length];
+
+            document.getElementById('timer-exercise-title').textContent = item.title;
+            document.getElementById('timer-exercise-cue').textContent = `IKMF Cue: ${item.cue}`;
+        }
+
+        function logCompletedWorkout() {
+            appState.completedLogsCount++;
+            saveAppState();
+            renderDashboard();
+            alert(`Einheit erfolgreich geloggt! Insgesamte Einheiten: ${appState.completedLogsCount}`);
+        }
+
+        /* ----------------------------------------------------
+           9. IKMF TECHNIK-KATALOG & CUSTOM MODAL
+        ---------------------------------------------------- */
+        function renderTechniqueCatalog() {
+            const container = document.getElementById('catalog-cards-container');
+            container.innerHTML = '';
+
+            const searchTerm = (document.getElementById('catalog-search')?.value || '').toLowerCase();
+            const catFilter = document.getElementById('catalog-category-filter')?.value || 'all';
+
+            const filtered = appState.techniques.filter(t => {
+                const matchesSearch = t.name_de.toLowerCase().includes(searchTerm) ||
+                                      t.name_en.toLowerCase().includes(searchTerm) ||
+                                      t.desc.toLowerCase().includes(searchTerm);
+                const matchesCat = catFilter === 'all' || t.category === catFilter;
+                return matchesSearch && matchesCat;
+            });
+
+            filtered.forEach(tech => {
+                const card = document.createElement('div');
+                card.className = `bg-tactical-950 border rounded-2xl p-4 sm:p-5 space-y-3 flex flex-col justify-between transition-all ${
+                    tech.status === 2 ? 'border-emerald-500/40 shadow-sm' :
+                    tech.status === 1 ? 'border-amber-500/40' :
+                    'border-slate-800'
+                }`;
+
+                const statusBadges = [
+                    { label: 'Nicht geübt', class: 'bg-slate-800 text-slate-400 border-slate-700' },
+                    { label: 'In Arbeit', class: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
+                    { label: 'Prüfungssicher', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' }
+                ];
+
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <span class="text-[10px] font-black px-2 py-0.5 rounded ${tech.level === 'P2' ? 'bg-amber-500 text-tactical-950' : 'bg-slate-700 text-slate-200'}">
+                                    ${tech.level}
+                                </span>
+                                <h3 class="font-bold text-slate-100 text-sm sm:text-base mt-1.5 leading-snug">${tech.name_de}</h3>
+                                <p class="text-[11px] text-slate-500 italic font-mono">${tech.name_en}</p>
+                            </div>
+                            <button onclick="cycleTechniqueStatus('${tech.id}')" class="text-xs px-2.5 py-1 rounded-lg border font-semibold transition-colors ${statusBadges[tech.status].class}">
+                                ${statusBadges[tech.status].label}
+                            </button>
+                        </div>
+
+                        <p class="text-xs text-slate-300 leading-relaxed pt-1">${tech.desc}</p>
+
+                        ${tech.cues && tech.cues.length ? `
+                            <div class="bg-tactical-900 p-2.5 rounded-xl border border-slate-800/80 space-y-1">
+                                <span class="text-[10px] font-bold text-amber-500 uppercase tracking-wider block">Biomechanik Cues & Abzüge:</span>
+                                <ul class="list-disc list-inside text-[11px] text-slate-400 space-y-0.5">
+                                    ${tech.cues.map(c => `<li>${c}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+
+                        <div>
+                            <textarea onchange="updateTechniqueNote('${tech.id}', this.value)" rows="1" placeholder="Persönliche Notizen (z.B. Trainer Feedback)..." class="w-full bg-tactical-900 text-xs text-slate-300 border border-slate-800 rounded-lg p-2 focus:outline-none focus:border-amber-500">${tech.notes || ''}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex items-center justify-between border-t border-slate-900 text-xs">
+                        ${tech.youtube ? `
+                            <a href="${tech.youtube}" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold">
+                                <i data-lucide="youtube" class="w-4 h-4 text-red-500"></i> YouTube Video
+                            </a>
+                        ` : '<span></span>'}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        function cycleTechniqueStatus(techId) {
+            const tech = appState.techniques.find(t => t.id === techId);
+            if (tech) {
+                tech.status = (tech.status + 1) % 3;
+                saveAppState();
+                renderTechniqueCatalog();
+                renderDashboard();
+            }
+        }
+
+        function updateTechniqueNote(techId, text) {
+            const tech = appState.techniques.find(t => t.id === techId);
+            if (tech) {
+                tech.notes = text;
+                saveAppState();
+            }
+        }
+
+        function openAddTechniqueModal() {
+            document.getElementById('tech-modal').classList.remove('hidden');
+        }
+
+        function closeAddTechniqueModal() {
+            document.getElementById('tech-modal').classList.add('hidden');
+        }
+
+        function handleSaveCustomTechnique(e) {
+            e.preventDefault();
+            const name = document.getElementById('custom-tech-name').value;
+            const level = document.getElementById('custom-tech-level').value;
+            const category = document.getElementById('custom-tech-category').value;
+            const desc = document.getElementById('custom-tech-desc').value;
+            const yt = document.getElementById('custom-tech-yt').value;
+
+            const newTech = {
+                id: 'custom_' + Date.now(),
+                level: level,
+                category: category,
+                name_de: name,
+                name_en: name,
+                desc: desc || 'Eigene Übung aus dem Training.',
+                cues: ['Saubere Ausführung beachten'],
+                youtube: yt || '',
+                status: 1,
+                notes: ''
+            };
+
+            appState.techniques.push(newTech);
+            saveAppState();
+            closeAddTechniqueModal();
+            renderTechniqueCatalog();
+            renderDashboard();
+        }
+
+        /* ----------------------------------------------------
+           10. AUGEN-ZU STRESS-DRILL GENERATOR (TTS & WAKE LOCK)
+        ---------------------------------------------------- */
+        const DRILL_ATTACKS = [
+            { name: 'Inside Defense!', cue: 'Simultaner Handfeuer Konter!' },
+            { name: 'Würge von vorne Plucking!', cue: 'Zupfen, Tritt, Konterserie!' },
+            { name: '360-Grad Messer-Abwehr!', cue: 'Unterarm-Schild & Gegenschlag!' },
+            { name: 'Bear Hug von hinten eingeklemmt!', cue: 'Schwerpunkt Tief, Fersenschlag!' },
+            { name: 'Seitwärtshaken Abwehr!', cue: 'Kompakte Deckung & Konter!' },
+            { name: 'Wand-Würge Befreiung!', cue: 'Arm-Schwung & Körperrotation!' },
+            { name: 'Boden-Mount Würge!', cue: 'Bridge & Roll!' }
+        ];
+
+        function speakText(text) {
+            if (!('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel(); // Stop prior speech
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'de-DE';
+            utter.rate = 1.1; // Fast tactical voice
+            utter.pitch = 1.0;
+            window.speechSynthesis.speak(utter);
+        }
+
+        function startStressDrill() {
+            if (drillIsRunning) return;
+            drillIsRunning = true;
+
+            requestWakeLock();
+
+            document.getElementById('btn-drill-start').disabled = true;
+            document.getElementById('btn-drill-start').classList.add('opacity-50');
+            document.getElementById('btn-drill-stop').disabled = false;
+            document.getElementById('btn-drill-stop').classList.remove('opacity-50');
+
+            document.getElementById('drill-status-text').textContent = 'DRILL LÄUFT - AUGEN SCHLIESSEN!';
+            document.getElementById('drill-status-text').className = 'text-xs font-bold tracking-widest text-emerald-400 uppercase animate-pulse';
+
+            speakText('Stress Drill gestartet. Augen schliessen!');
+            scheduleNextDrillAttack();
+        }
+
+        function scheduleNextDrillAttack() {
+            if (!drillIsRunning) return;
+
+            const intervalRange = document.getElementById('drill-interval-setting').value || '5-10';
+            const [minSec, maxSec] = intervalRange.split('-').map(Number);
+            const delayMs = (Math.floor(Math.random() * (maxSec - minSec + 1)) + minSec) * 1000;
+
+            drillIntervalTimeout = setTimeout(() => {
+                if (!drillIsRunning) return;
+
+                const attack = DRILL_ATTACKS[Math.floor(Math.random() * DRILL_ATTACKS.length)];
+                
+                document.getElementById('drill-attack-display').textContent = attack.name;
+                document.getElementById('drill-cue-display').textContent = attack.cue;
+
+                playBeep(880, 0.2, 'sawtooth');
+                speakText(attack.name);
+
+                scheduleNextDrillAttack();
+            }, delayMs);
+        }
+
+        function stopStressDrill() {
+            drillIsRunning = false;
+            if (drillIntervalTimeout) clearTimeout(drillIntervalTimeout);
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            releaseWakeLock();
+
+            document.getElementById('btn-drill-start').disabled = false;
+            document.getElementById('btn-drill-start').classList.remove('opacity-50');
+            document.getElementById('btn-drill-stop').disabled = true;
+            document.getElementById('btn-drill-stop').classList.add('opacity-50');
+
+            document.getElementById('drill-status-text').textContent = 'DRILL GESTOPPT';
+            document.getElementById('drill-status-text').className = 'text-xs font-bold tracking-widest text-slate-500 uppercase';
+        }
+
+        /* ----------------------------------------------------
+           11. BACKUP & SYNC SYSTEM (JSON EXPORT/IMPORT/COPY)
+        ---------------------------------------------------- */
+        function openBackupModal() {
+            document.getElementById('backup-modal').classList.remove('hidden');
+        }
+
+        function closeBackupModal() {
+            document.getElementById('backup-modal').classList.add('hidden');
+        }
+
+        function exportDataAsJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+            const downloadAnchor = document.createElement('a');
+            const todayStr = new Date().toISOString().split('T')[0];
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `ikmf-p2-coach-backup-${todayStr}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function copyDataToClipboard() {
+            const jsonText = JSON.stringify(appState, null, 2);
+            
+            // Fallback execCommand copy for iOS compatibility inside webviews
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = jsonText;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            try {
+                document.execCommand('copy');
+                alert('Backup-Daten erfolgreich in die Zwischenablage kopiert!');
+            } catch (err) {
+                alert('Kopieren fehlgeschlagen. Bitte manuell exportieren.');
+            }
+            document.body.removeChild(tempTextArea);
+        }
+
+        function importDataFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed && parsed.techniques && parsed.schedule) {
+                        appState = parsed;
+                        saveAppState();
+                        alert('Backup erfolgreich importiert!');
+                        closeBackupModal();
+                        location.reload();
+                    } else {
+                        alert('Ungültiges Backup-Format.');
+                    }
+                } catch(err) {
+                    alert('Fehler beim Lesen der JSON-Datei.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function importDataFromText() {
+            const text = document.getElementById('import-text-area').value;
+            if (!text.trim()) return;
+
+            try {
+                const parsed = JSON.parse(text);
+                if (parsed && parsed.techniques && parsed.schedule) {
+                    appState = parsed;
+                    saveAppState();
+                    alert('Backup erfolgreich angewendet!');
+                    closeBackupModal();
+                    location.reload();
+                } else {
+                    alert('Ungültiger Backup-Code.');
+                }
+            } catch(e) {
+                alert('Syntax-Fehler im JSON-Code.');
+            }
+        }
+
+        function resetAllAppData() {
+            if (confirm('Möchtest du wirklich alle Daten zurücksetzen? Dein Fortschritt geht verloren.')) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+
+        /* ----------------------------------------------------
+           12. APP INITIALIZATION ON LOAD
+        ---------------------------------------------------- */
+        window.onload = function() {
+            loadAppState();
+            switchTab(appState.activeTab || 'dashboard');
+            lucide.createIcons();
+            
+            // Initial Wake lock status check
+            if ('wakeLock' in navigator) {
+                updateWakeLockUI(false, 'Bereit');
+            } else {
+                updateWakeLockUI(false, 'Nicht unterstützt');
+            }
+        };
+    </script>
+</body>
+</html>
